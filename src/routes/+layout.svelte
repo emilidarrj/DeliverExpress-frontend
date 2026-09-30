@@ -2,7 +2,14 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { sesion, cargarSesion, cerrarSesion } from '$lib/stores/sesion.js';
+	import { sesion, cargarSesion, cerrarSesion, RUTA_POR_ROL } from '$lib/stores/sesion.js';
+	import {
+		notificaciones,
+		noLeidas,
+		marcarTodasLeidas,
+		eliminarNotificacion,
+		tiempoRelativo
+	} from '$lib/stores/notificaciones.js';
 	import Toast from '$lib/componentes/Toast.svelte';
 	import './layout.css';
 
@@ -10,30 +17,252 @@
 
 	onMount(cargarSesion);
 
-	// Rutas donde NO se debe mostrar el header
 	const RUTAS_SIN_HEADER = ['/login', '/registro', '/'];
 
-	function mostrarHeader() {
-		if (!sesion) return false;
-		if (!page.url.pathname) return false;
-		if (RUTAS_SIN_HEADER.includes(page.url.pathname)) return false;
-		return true;
-	}
+	let mostrarHeader = $derived(
+		$sesion.token && page.url.pathname && !RUTAS_SIN_HEADER.includes(page.url.pathname)
+	);
+
+	let menuAbierto = $state(false);
+	let panelNotis = $state(false);
 
 	function salir() {
 		cerrarSesion();
 		goto('/login');
 	}
+
+	function irPerfil() {
+		menuAbierto = false;
+		goto('/cliente/perfil');
+	}
+
+	function irPedidos() {
+		menuAbierto = false;
+		goto('/cliente/pedidos');
+	}
+
+	function abrirNotificaciones() {
+		panelNotis = !panelNotis;
+		menuAbierto = false;
+		// Al abrir, marcar todas como leídas → el circulito desaparece
+		if (panelNotis) {
+			setTimeout(() => marcarTodasLeidas(), 800);
+		}
+	}
+
+	function cerrarTodo() {
+		menuAbierto = false;
+		panelNotis = false;
+	}
 </script>
 
-{#if $sesion.token && mostrarHeader()}
-	<header class="bg-white shadow p-3 flex justify-between items-center print:hidden">
-		<span class="font-semibold">DeliverExpress</span>
-		<div class="flex items-center gap-3">
-			<span class="text-sm text-gray-600">{$sesion.nombre} · {$sesion.rol}</span>
-			<button onclick={salir} class="text-sm text-red-600 hover:underline">
-				Cerrar sesión
-			</button>
+{#if mostrarHeader}
+	<header class="bg-white shadow-sm border-b border-gray-100 print:hidden relative z-50">
+		<div class="max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
+			<!-- Logo -->
+			<a href={RUTA_POR_ROL[$sesion.rol] || '/'} class="flex items-center gap-2">
+				<span class="font-bold text-primary">DeliverExpress</span>
+			</a>
+
+			<!-- Campana + Avatar -->
+			<div class="flex items-center gap-2">
+				<!-- Campana con dropdown -->
+				<div class="relative">
+					<button
+						type="button"
+						onclick={abrirNotificaciones}
+						class="w-9 h-9 rounded-full hover:bg-surface-container-low flex items-center justify-center transition-colors relative"
+						aria-label="Notificaciones"
+					>
+						<span class="material-symbols-outlined text-on-surface-variant text-[22px]">notifications</span>
+
+						<!-- Circulito naranja SOLO si hay no leídas -->
+						{#if $noLeidas > 0}
+							<span
+								class="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary-container text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"
+							>
+								{$noLeidas}
+							</span>
+						{/if}
+					</button>
+
+					{#if panelNotis}
+						<!-- Overlay para cerrar al click afuera -->
+						<div
+							class="fixed inset-0 z-40"
+							onclick={cerrarTodo}
+							onkeydown={(e) => e.key === 'Escape' && cerrarTodo()}
+							role="presentation"
+						></div>
+
+						<!-- Panel de notificaciones -->
+						<div
+							class="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+						>
+							<!-- Header -->
+							<div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+								<div class="flex items-center gap-2">
+									<h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
+									{#if $noLeidas > 0}
+										<span class="bg-primary-fixed text-on-primary-fixed text-[10px] font-bold px-2 py-0.5 rounded-full">
+											{$noLeidas} nuevas
+										</span>
+									{/if}
+								</div>
+								{#if $notificaciones.length > 0}
+									<button
+										type="button"
+										onclick={() => notificaciones.set([])}
+										class="text-[11px] text-on-surface-variant hover:text-primary-container transition-colors"
+									>
+										Limpiar
+									</button>
+								{/if}
+							</div>
+
+							<!-- Lista -->
+							<div class="max-h-96 overflow-y-auto">
+								{#if $notificaciones.length === 0}
+									<!-- Estado vacío -->
+									<div class="py-10 flex flex-col items-center justify-center px-6">
+										<div class="w-14 h-14 rounded-full bg-surface-container-low flex items-center justify-center mb-3">
+											<span class="material-symbols-outlined text-on-surface-variant text-[28px]">
+												notifications_off
+											</span>
+										</div>
+										<p class="text-sm font-semibold text-on-surface">Sin notificaciones</p>
+										<p class="text-xs text-on-surface-variant text-center mt-1">
+											Aquí verás las actualizaciones de tus pedidos
+										</p>
+									</div>
+								{:else}
+									{#each $notificaciones as n (n.id)}
+										<div
+											class="flex items-start gap-3 px-4 py-3 hover:bg-surface-container-low/50 transition-colors border-b border-gray-100 last:border-b-0
+												{!n.leida ? 'bg-primary-fixed/10' : ''}"
+										>
+											<!-- Ícono por tipo -->
+											<div
+												class="w-9 h-9 rounded-full flex items-center justify-center shrink-0
+													{n.tipo === 'pedido' ? 'bg-primary-fixed text-primary-container' : ''}
+													{n.tipo === 'oferta' ? 'bg-secondary-fixed text-secondary' : ''}
+													{n.tipo === 'info' ? 'bg-tertiary-fixed text-tertiary' : ''}"
+											>
+												<span class="material-symbols-outlined text-[18px]">
+													{n.tipo === 'pedido' ? 'receipt_long' : ''}
+													{n.tipo === 'oferta' ? 'local_offer' : ''}
+													{n.tipo === 'info' ? 'info' : ''}
+												</span>
+											</div>
+
+											<!-- Contenido -->
+											<div class="flex-1 min-w-0">
+												<div class="flex items-start justify-between gap-2">
+													<p class="text-sm font-semibold text-on-surface leading-tight">
+														{n.titulo}
+													</p>
+													{#if !n.leida}
+														<span class="w-2 h-2 rounded-full bg-primary-container shrink-0 mt-1"></span>
+													{/if}
+												</div>
+												<p class="text-xs text-on-surface-variant mt-0.5 leading-snug">
+													{n.mensaje}
+												</p>
+												<p class="text-[10px] text-on-surface-variant/70 mt-1">
+													{tiempoRelativo(n.fecha)}
+												</p>
+											</div>
+
+											<!-- Cerrar -->
+											<button
+												type="button"
+												onclick={() => eliminarNotificacion(n.id)}
+												class="text-on-surface-variant/60 hover:text-red-500 p-1 rounded transition-colors shrink-0"
+												aria-label="Eliminar"
+											>
+												<span class="material-symbols-outlined text-[16px]">close</span>
+											</button>
+										</div>
+									{/each}
+								{/if}
+							</div>
+
+							<!-- Footer -->
+							{#if $notificaciones.length > 0}
+								<div class="px-4 py-2.5 bg-surface-container-low border-t border-gray-100 text-center">
+									<a
+										href="/cliente/pedidos"
+										class="text-xs font-semibold text-primary-container hover:underline"
+										onclick={cerrarTodo}
+									>
+										Ver todos mis pedidos →
+									</a>
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
+
+				<!-- Avatar + dropdown -->
+				<div class="relative">
+					<button
+						type="button"
+						onclick={() => {
+							menuAbierto = !menuAbierto;
+							panelNotis = false;
+						}}
+						class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-surface-container-low transition-colors"
+					>
+						<div class="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-sm">
+							{$sesion.nombre?.charAt(0) || 'C'}
+						</div>
+						<div class="hidden sm:flex flex-col text-left leading-tight">
+							<span class="text-xs text-on-surface-variant">{$sesion.nombre}</span>
+							<span class="text-[10px] text-on-surface-variant/70 capitalize">{$sesion.rol}</span>
+						</div>
+						<span class="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
+					</button>
+
+					{#if menuAbierto}
+						<div
+							class="fixed inset-0 z-40"
+							onclick={cerrarTodo}
+							onkeydown={(e) => e.key === 'Escape' && cerrarTodo()}
+							role="presentation"
+						></div>
+
+						<div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+							{#if $sesion.rol === 'cliente'}
+								<button
+									type="button"
+									onclick={irPerfil}
+									class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
+								>
+									<span class="material-symbols-outlined text-[20px] text-primary-container">person</span>
+									<span>Mi perfil fiscal</span>
+								</button>
+								<button
+									type="button"
+									onclick={irPedidos}
+									class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
+								>
+									<span class="material-symbols-outlined text-[20px] text-primary-container">receipt_long</span>
+									<span>Mis pedidos</span>
+								</button>
+								<div class="h-px bg-gray-100 my-1"></div>
+							{/if}
+							<button
+								type="button"
+								onclick={salir}
+								class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+							>
+								<span class="material-symbols-outlined text-[20px]">logout</span>
+								<span>Cerrar sesión</span>
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 	</header>
 {/if}
