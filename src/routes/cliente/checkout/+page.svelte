@@ -6,6 +6,7 @@
 	import { DIRECCIONES } from '$lib/mock/direcciones.js';
 	import { cotizarMock } from '$lib/mock/cotizacion.js';
 	import { crearPedidoMock } from '$lib/mock/crear-pedido.js';
+	import { agregarPedido } from '$lib/stores/pedidos.js';
 
 	// ───── Estado ─────
 	let propina = $state(2);
@@ -122,14 +123,17 @@
 			const propinaFinal = propinaPersonalizada ? Number(propinaOtro) : propina;
 
 			const pedido = await crearPedidoMock({
-				id_direccion: direccionActual.id_direccion,
-				propina: propinaFinal,
-				moneda_pago: moneda,
-				ultimos4
-			});
+             id_direccion: direccionActual.id_direccion,
+             propina: propinaFinal,
+             moneda_pago: moneda,
+             ultimos4
+            });
 
-			vaciarCarrito();
-			mostrarToast('exito', `¡Pedido #${pedido.id_pedido} confirmado!`);
+            // 🔑 Agregar el pedido al store para que aparezca en la lista
+            agregarPedido(pedido);
+
+             vaciarCarrito();
+             mostrarToast('exito', `¡Pedido #${pedido.id_pedido} confirmado!`);
 
 			setTimeout(() => {
 				goto(`/cliente/pedidos/${pedido.id_pedido}`);

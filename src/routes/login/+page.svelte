@@ -1,13 +1,21 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { iniciarSesion, RUTA_POR_ROL } from '$lib/stores/sesion.js';
-	import { mostrarToast } from '$lib/toast.js';
-	import { loginMock } from '$lib/mock/usuarios.js';
+    import { onMount } from 'svelte';
+    import { iniciarSesion, RUTA_POR_ROL, sesion, cargarSesion } from '$lib/stores/sesion.js';
+    import { mostrarToast } from '$lib/toast.js';
+    import { loginMock } from '$lib/mock/usuarios.js';
 
 	let email = $state('cliente01@demo.com');
     let password = $state('demo1234');
     let cargando = $state(false);
     let mostrarPassword = $state(false);
+
+	onMount(() => {
+	        cargarSesion();
+	        if ($sesion.token && $sesion.rol) {
+		            goto(RUTA_POR_ROL[$sesion.rol]);
+	        }
+    });
 
 	async function enviar(e) {
 		e.preventDefault();

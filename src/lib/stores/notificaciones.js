@@ -1,7 +1,7 @@
 import { writable, derived } from 'svelte/store';
 
-// Estructura de una notificación:
-// { id, titulo, mensaje, fecha (ISO), leida (bool), tipo ('pedido'|'oferta'|'info') }
+// Estructura:
+// { id, titulo, mensaje, fecha (ISO), leida (bool), tipo, id_pedido (opcional) }
 
 const iniciales = [
 	{
@@ -10,7 +10,8 @@ const iniciales = [
 		mensaje: 'Tu pedido #18 fue recibido por el restaurante',
 		fecha: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
 		leida: false,
-		tipo: 'pedido'
+		tipo: 'pedido',
+		id_pedido: 18
 	},
 	{
 		id: 2,
@@ -18,19 +19,16 @@ const iniciales = [
 		mensaje: 'Carlos M. retiró tu pedido y va hacia tu dirección',
 		fecha: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
 		leida: false,
-		tipo: 'pedido'
+		tipo: 'pedido',
+		id_pedido: 18
 	}
 ];
 
 export const notificaciones = writable(iniciales);
 
-// Cantidad de no leídas (se recalcula solo)
-export const noLeidas = derived(notificaciones, ($n) =>
-	$n.filter((x) => !x.leida).length
-);
+export const noLeidas = derived(notificaciones, ($n) => $n.filter((x) => !x.leida).length);
 
-// Agregar notificación (útil para cuando llegue WS "pedido")
-export function agregarNotificacion({ titulo, mensaje, tipo = 'info' }) {
+export function agregarNotificacion({ titulo, mensaje, tipo = 'info', id_pedido = null }) {
 	notificaciones.update((lista) => [
 		{
 			id: Date.now(),
@@ -38,28 +36,25 @@ export function agregarNotificacion({ titulo, mensaje, tipo = 'info' }) {
 			mensaje,
 			fecha: new Date().toISOString(),
 			leida: false,
-			tipo
+			tipo,
+			id_pedido
 		},
 		...lista
 	]);
 }
 
-// Marcar todas como leídas (se llama al abrir el panel)
 export function marcarTodasLeidas() {
 	notificaciones.update((lista) => lista.map((n) => ({ ...n, leida: true })));
 }
 
-// Eliminar una
 export function eliminarNotificacion(id) {
 	notificaciones.update((lista) => lista.filter((n) => n.id !== id));
 }
 
-// Vaciar todas
 export function vaciarNotificaciones() {
 	notificaciones.set([]);
 }
 
-// Formato "hace X min"
 export function tiempoRelativo(iso) {
 	const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
 	if (diff < 60) return 'hace unos segundos';

@@ -44,9 +44,15 @@
 	function abrirNotificaciones() {
 		panelNotis = !panelNotis;
 		menuAbierto = false;
-		// Al abrir, marcar todas como leídas → el circulito desaparece
 		if (panelNotis) {
 			setTimeout(() => marcarTodasLeidas(), 800);
+		}
+	}
+
+	function irANotificacion(n) {
+		if (n.id_pedido) {
+			panelNotis = false;
+			goto(`/cliente/pedidos/${n.id_pedido}`);
 		}
 	}
 
@@ -76,7 +82,6 @@
 					>
 						<span class="material-symbols-outlined text-on-surface-variant text-[22px]">notifications</span>
 
-						<!-- Circulito naranja SOLO si hay no leídas -->
 						{#if $noLeidas > 0}
 							<span
 								class="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary-container text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"
@@ -87,7 +92,6 @@
 					</button>
 
 					{#if panelNotis}
-						<!-- Overlay para cerrar al click afuera -->
 						<div
 							class="fixed inset-0 z-40"
 							onclick={cerrarTodo}
@@ -95,11 +99,10 @@
 							role="presentation"
 						></div>
 
-						<!-- Panel de notificaciones -->
 						<div
 							class="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
 						>
-							<!-- Header -->
+							<!-- Header del panel -->
 							<div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
 								<div class="flex items-center gap-2">
 									<h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
@@ -123,7 +126,6 @@
 							<!-- Lista -->
 							<div class="max-h-96 overflow-y-auto">
 								{#if $notificaciones.length === 0}
-									<!-- Estado vacío -->
 									<div class="py-10 flex flex-col items-center justify-center px-6">
 										<div class="w-14 h-14 rounded-full bg-surface-container-low flex items-center justify-center mb-3">
 											<span class="material-symbols-outlined text-on-surface-variant text-[28px]">
@@ -138,7 +140,11 @@
 								{:else}
 									{#each $notificaciones as n (n.id)}
 										<div
-											class="flex items-start gap-3 px-4 py-3 hover:bg-surface-container-low/50 transition-colors border-b border-gray-100 last:border-b-0
+											role="button"
+											tabindex="0"
+											onclick={() => irANotificacion(n)}
+											onkeydown={(e) => e.key === 'Enter' && irANotificacion(n)}
+											class="flex items-start gap-3 px-4 py-3 hover:bg-surface-container-low/50 transition-colors border-b border-gray-100 last:border-b-0 cursor-pointer
 												{!n.leida ? 'bg-primary-fixed/10' : ''}"
 										>
 											<!-- Ícono por tipo -->
@@ -173,10 +179,13 @@
 												</p>
 											</div>
 
-											<!-- Cerrar -->
+											<!-- Cerrar (evita que se propague) -->
 											<button
 												type="button"
-												onclick={() => eliminarNotificacion(n.id)}
+												onclick={(e) => {
+													e.stopPropagation();
+													eliminarNotificacion(n.id);
+												}}
 												class="text-on-surface-variant/60 hover:text-red-500 p-1 rounded transition-colors shrink-0"
 												aria-label="Eliminar"
 											>
