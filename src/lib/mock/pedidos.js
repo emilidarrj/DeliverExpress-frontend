@@ -1,5 +1,15 @@
-// Historial de pedidos del cliente.
-// Cuando el backend esté listo: GET /api/cliente/pedidos (lista) y GET /api/cliente/pedidos/{id} (detalle)
+// ═══════════════════════════════════════════════════════════════════
+// MOCK DE PEDIDOS
+// Cuando el backend esté listo, esto se reemplaza por llamadas a la API:
+//   GET /api/cliente/pedidos          → PEDIDOS
+//   GET /api/cliente/pedidos/{id}     → detalle de un pedido
+//   GET /api/repartidor/historial     → PEDIDOS_REPARTIDOR_DEMO
+//   GET /api/coordinador/pedidos-activos → PEDIDOS_ACTIVOS_COORDINADOR_DEMO
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// 1) PEDIDOS DEL CLIENTE (estructura completa del roadmap_backend.txt)
+// ═══════════════════════════════════════════════════════════════════
 
 const REST_INFO = {
 	1: { nombre: 'Burger Artisan Lab', imagen: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80' },
@@ -30,7 +40,7 @@ export const PEDIDOS = [
 		costo_envio: 2.0,
 		propina: 2.0,
 		iva_total: 3.84,
-		igtf: 0.90,
+		igtf: 0.9,
 		total: 30.74,
 		moneda_pago: 'USD',
 		tasa_bcv_aplicada: 38.5,
@@ -191,7 +201,7 @@ export const PEDIDOS = [
 		costo_envio: 0,
 		propina: 2.0,
 		iva_total: 2.94,
-		igtf: 0.70,
+		igtf: 0.7,
 		total: 24.04,
 		moneda_pago: 'USD',
 		tasa_bcv_aplicada: 38.5,
@@ -236,7 +246,7 @@ export const PEDIDOS = [
 		costo_envio: 1.5,
 		propina: 0,
 		iva_total: 2.77,
-		igtf: 0.60,
+		igtf: 0.6,
 		total: 20.67,
 		moneda_pago: 'USD',
 		tasa_bcv_aplicada: 38.2,
@@ -359,7 +369,7 @@ export const PEDIDOS = [
 		total: 15.08,
 		moneda_pago: 'VES',
 		tasa_bcv_aplicada: 37.5,
-		total_ves: 565.50,
+		total_ves: 565.5,
 		id_factura: null,
 		distancia_km: 4.1,
 		tiempo_estimado_min: 40,
@@ -378,7 +388,7 @@ export const PEDIDOS = [
 	}
 ];
 
-// ───── Helpers (por si otros componentes los necesitan) ─────
+// ───── Helpers para el panel del cliente ─────
 
 export function filtrarPedidos(categoria) {
 	if (!categoria || categoria === 'todos') return PEDIDOS;
@@ -396,3 +406,100 @@ export function contarPorCategoria() {
 		cancelados: PEDIDOS.filter((p) => p.id_estado === 6).length
 	};
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// 2) PEDIDOS DEL REPARTIDOR (María)
+// Estructura simplificada para el panel del repartidor.
+// Cuando el backend esté listo: GET /api/repartidor/historial
+// ═══════════════════════════════════════════════════════════════════
+
+export const PEDIDOS_REPARTIDOR_DEMO = [
+	{
+		id_pedido: 101,
+		estado: 'listo_para_retirar',
+		restaurante: {
+			nombre: 'Burger Artisan Lab',
+			direccion: 'Av. Principal, Local 3, Puerto Ordaz',
+			telefono: '+58 414-1234567',
+			latitud: 8.2865,
+			longitud: -62.7189
+		},
+		cliente: {
+			nombre: 'Carlos Mendoza',
+			telefono: '+58 424-9876543',
+			direccion: 'Calle Los Olivos, Casa 12, Puerto Ordaz',
+			latitud: 8.2915,
+			longitud: -62.7135,
+			referencia: 'Frente a la panaderia'
+		},
+		productos: [
+			{ nombre: 'Hamburguesa clasica', cantidad: 2 },
+			{ nombre: 'Papas fritas grandes', cantidad: 1 }
+		],
+		distancia_km: 1.8,
+		tiempo_estimado_min: 25,
+		costo_envio: 2.5,
+		propina: 1.0,
+		subtotal: 12.5,
+		total: 16.0
+	},
+	{
+		id_pedido: 102,
+		estado: 'en_camino',
+		restaurante: {
+			nombre: 'Pizzeria Napoli',
+			direccion: 'Av. Guayana, CC Orinoco, Puerto Ordaz',
+			telefono: '+58 414-5555555',
+			latitud: 8.2795,
+			longitud: -62.7289
+		},
+		cliente: {
+			nombre: 'Ana Rodriguez',
+			telefono: '+58 424-1111111',
+			direccion: 'Res. Villa Nueva, Torre B, Apto 502, Puerto Ordaz',
+			latitud: 8.2955,
+			longitud: -62.7055,
+			referencia: 'Porton azul'
+		},
+		productos: [
+			{ nombre: 'Pizza margarita', cantidad: 1 },
+			{ nombre: 'Refresco 2L', cantidad: 1 }
+		],
+		distancia_km: 3.2,
+		tiempo_estimado_min: 35,
+		costo_envio: 3.5,
+		propina: 0,
+		subtotal: 10.0,
+		total: 13.5
+	}
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// 3) PEDIDOS ACTIVOS DEL COORDINADOR (María)
+// Estructura para el panel del coordinador.
+// Cuando el backend esté listo: GET /api/coordinador/pedidos-activos
+// ═══════════════════════════════════════════════════════════════════
+
+export const PEDIDOS_ACTIVOS_COORDINADOR_DEMO = [
+	...PEDIDOS_REPARTIDOR_DEMO,
+	{
+		id_pedido: 103,
+		estado: 'en_preparacion',
+		restaurante: {
+			nombre: 'Sushi Tokio',
+			direccion: 'Av. Atlantico, Puerto Ordaz',
+			latitud: 8.288,
+			longitud: -62.72
+		},
+		repartidor: null,
+		cliente: {
+			nombre: 'Luis Perez',
+			direccion: 'Calle 5, Casa 8, Puerto Ordaz',
+			latitud: 8.29,
+			longitud: -62.71
+		},
+		distancia_km: 2.1,
+		tiempo_estimado_min: 30,
+		total: 18.0
+	}
+];
