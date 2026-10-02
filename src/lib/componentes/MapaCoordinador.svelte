@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
 
-  let { restaurantes = [], repartidores = [], pedidos = [] } = $props();
+  let { restaurantes = [], repartidores = [], pedidos = [], clientes = [] } = $props();
 
   let mapaEl;
   let mapa = null;
@@ -15,7 +15,8 @@
     restaurante: '#cc4900',
     repartidor_libre: '#2563eb',
     repartidor_ocupado: '#9ca3af',
-    pedido: '#8b5cf6'
+    pedido: '#8b5cf6',
+    cliente: '#7c3aed'
   };
 
   function crearIcono(color, icono) {
@@ -37,7 +38,18 @@
         const icono = crearIcono(COLORES.restaurante, 'storefront');
         if (icono) {
           L.marker([r.latitud, r.longitud], { icon: icono })
-            .bindPopup(`<b>${r.nombre}</b><br/>${r.categoria}`)
+            .bindPopup(`<b>${r.nombre}</b><br/>${r.categoria ?? ''}`)
+            .addTo(marcadoresLayer);
+        }
+      });
+    }
+
+    if (filtroActivo === 'todos' || filtroActivo === 'clientes') {
+      clientes.forEach(c => {
+        const icono = crearIcono(COLORES.cliente, 'home');
+        if (icono) {
+          L.marker([c.latitud, c.longitud], { icon: icono })
+            .bindPopup(`<b>${c.nombre}</b><br/>${c.direccion ?? ''}`)
             .addTo(marcadoresLayer);
         }
       });
@@ -49,7 +61,7 @@
         const icono = crearIcono(color, 'two_wheeler');
         if (icono) {
           L.marker([r.latitud_actual, r.longitud_actual], { icon: icono })
-            .bindPopup(`<b>${r.nombre}</b><br/>${r.vehiculo} - ${r.zona}<br/>${r.calificacion_promedio} estrellas`)
+            .bindPopup(`<b>${r.nombre}</b><br/>${r.vehiculo ?? ''} - ${r.zona ?? ''}<br/>${r.calificacion_promedio ?? ''} estrellas`)
             .addTo(marcadoresLayer);
         }
       });
@@ -83,7 +95,7 @@
       await import('leaflet/dist/leaflet.css');
 
       mapa = L.map(mapaEl, {
-        center: [8.2900, -62.7150],
+        center: [8.29, -62.715],
         zoom: 14,
         zoomControl: true
       });
@@ -113,36 +125,58 @@
     >
       Todos
     </button>
-    <button
-      onclick={() => cambiarFiltro('restaurantes')}
-      class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
-        {filtroActivo === 'restaurantes'
-          ? 'bg-primary-container text-white'
-          : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
-    >
-      <span class="w-2 h-2 rounded-full bg-[#cc4900]"></span>
-      Restaurantes ({restaurantes.length})
-    </button>
-    <button
-      onclick={() => cambiarFiltro('repartidores')}
-      class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
-        {filtroActivo === 'repartidores'
-          ? 'bg-primary-container text-white'
-          : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
-    >
-      <span class="w-2 h-2 rounded-full bg-[#2563eb]"></span>
-      Repartidores ({repartidores.length})
-    </button>
-    <button
-      onclick={() => cambiarFiltro('pedidos')}
-      class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
-        {filtroActivo === 'pedidos'
-          ? 'bg-primary-container text-white'
-          : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
-    >
-      <span class="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
-      Pedidos ({pedidos.length})
-    </button>
+
+    {#if restaurantes.length > 0}
+      <button
+        onclick={() => cambiarFiltro('restaurantes')}
+        class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
+          {filtroActivo === 'restaurantes'
+            ? 'bg-primary-container text-white'
+            : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
+      >
+        <span class="w-2 h-2 rounded-full bg-[#cc4900]"></span>
+        Restaurantes ({restaurantes.length})
+      </button>
+    {/if}
+
+    {#if clientes.length > 0}
+      <button
+        onclick={() => cambiarFiltro('clientes')}
+        class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
+          {filtroActivo === 'clientes'
+            ? 'bg-primary-container text-white'
+            : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
+      >
+        <span class="w-2 h-2 rounded-full bg-[#7c3aed]"></span>
+        Cliente ({clientes.length})
+      </button>
+    {/if}
+
+    {#if repartidores.length > 0}
+      <button
+        onclick={() => cambiarFiltro('repartidores')}
+        class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
+          {filtroActivo === 'repartidores'
+            ? 'bg-primary-container text-white'
+            : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
+      >
+        <span class="w-2 h-2 rounded-full bg-[#2563eb]"></span>
+        Repartidores ({repartidores.length})
+      </button>
+    {/if}
+
+    {#if pedidos.length > 0}
+      <button
+        onclick={() => cambiarFiltro('pedidos')}
+        class="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5
+          {filtroActivo === 'pedidos'
+            ? 'bg-primary-container text-white'
+            : 'bg-white text-on-surface-variant border border-gray-200 hover:border-primary'}"
+      >
+        <span class="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
+        Pedidos ({pedidos.length})
+      </button>
+    {/if}
   </div>
 
   <div class="relative">
@@ -152,20 +186,31 @@
       class="rounded-2xl overflow-hidden shadow-sm border border-gray-200"
     ></div>
 
-    <!-- LEYENDA SUPERPUESTA -->
     <div class="absolute bottom-4 left-4 right-4 z-[400] bg-white/95 backdrop-blur rounded-xl shadow-md px-4 py-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[11px]">
-      <span class="flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full bg-[#cc4900]"></span>
-        <span class="text-on-surface-variant font-medium">Restaurantes: <b class="text-on-surface">{restaurantes.length}</b></span>
-      </span>
-      <span class="flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>
-        <span class="text-on-surface-variant font-medium">Repartidores: <b class="text-on-surface">{repartidores.length}</b></span>
-      </span>
-      <span class="flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]"></span>
-        <span class="text-on-surface-variant font-medium">Pedidos: <b class="text-on-surface">{pedidos.length}</b></span>
-      </span>
+      {#if restaurantes.length > 0}
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#cc4900]"></span>
+          <span class="text-on-surface-variant font-medium">Restaurantes: <b class="text-on-surface">{restaurantes.length}</b></span>
+        </span>
+      {/if}
+      {#if clientes.length > 0}
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>
+          <span class="text-on-surface-variant font-medium">Cliente: <b class="text-on-surface">{clientes.length}</b></span>
+        </span>
+      {/if}
+      {#if repartidores.length > 0}
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>
+          <span class="text-on-surface-variant font-medium">Repartidores: <b class="text-on-surface">{repartidores.length}</b></span>
+        </span>
+      {/if}
+      {#if pedidos.length > 0}
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]"></span>
+          <span class="text-on-surface-variant font-medium">Pedidos: <b class="text-on-surface">{pedidos.length}</b></span>
+        </span>
+      {/if}
     </div>
   </div>
 </div>

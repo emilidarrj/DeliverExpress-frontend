@@ -1,5 +1,6 @@
 <script>
-	import { sesion } from '$lib/stores/sesion.js';
+	import { goto } from '$app/navigation';
+	import { sesion, RUTA_POR_ROL } from '$lib/stores/sesion.js';
 	import { mostrarToast } from '$lib/toast.js';
 	import { ZONAS } from '$lib/mock/zonas.js';
 	import { direcciones, agregarDireccion, marcarPrincipal } from '$lib/stores/direcciones.js';
@@ -15,7 +16,7 @@
 
 	// Modal de direcciones
 	let modalDireccion = $state(false);
-	let pasoModal = $state('lista'); // 'lista' | 'nueva'
+	let pasoModal = $state('lista');
 
 	let nuevaDireccion = $state({
 		id_zona: 1,
@@ -25,6 +26,12 @@
 		longitud: -62.735,
 		principal: false
 	});
+
+	// Volver al panel del rol
+	function volver() {
+		const ruta = RUTA_POR_ROL[$sesion.rol] || '/';
+		goto(ruta);
+	}
 
 	function abrirModal() {
 		pasoModal = 'lista';
@@ -73,7 +80,18 @@
 </script>
 
 <div class="min-h-screen bg-surface">
-	<div class="max-w-[800px] mx-auto px-4 py-8">
+	<div class="max-w-[800px] mx-auto px-4 py-6">
+
+		<!-- ═══════ BOTÓN VOLVER ═══════ -->
+		<button
+			type="button"
+			onclick={volver}
+			class="flex items-center gap-1.5 text-sm font-semibold text-on-surface-variant hover:text-primary-container transition-colors mb-5"
+		>
+			<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+			Volver al panel
+		</button>
+
 		<h1 class="text-2xl font-bold text-on-surface mb-6">Mi perfil</h1>
 
 		<div class="bg-white rounded-2xl shadow-sm p-6 flex flex-col gap-6">
@@ -197,7 +215,6 @@
 				</div>
 
 				{#if pasoModal === 'lista'}
-					<!-- Lista de direcciones -->
 					<div class="flex flex-col gap-2 mb-4">
 						{#each $direcciones as dir (dir.id_direccion)}
 							<div
@@ -236,7 +253,6 @@
 						Agregar nueva dirección
 					</button>
 				{:else}
-					<!-- Formulario nueva dirección -->
 					<div class="flex flex-col gap-4">
 						<div>
 							<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">Zona</label>

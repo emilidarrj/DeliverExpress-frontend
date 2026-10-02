@@ -7,8 +7,11 @@
 		notificaciones,
 		marcarTodasLeidas,
 		eliminarNotificacion,
+		agregarNotificacion,
 		tiempoRelativo
 	} from '$lib/stores/notificaciones.js';
+	import { escuchar, estadoWs } from '$lib/ws.js';
+	import { ESTADOS } from '$lib/estados.js';
 	import Toast from '$lib/componentes/Toast.svelte';
 	import './layout.css';
 
@@ -39,6 +42,52 @@
 
 	let noLeidasFiltradas = $derived(notisFiltradas.filter((n) => !n.leida).length);
 
+	// ══════════════════════════════════════════════
+	// WS → NOTIFICACIONES
+	// ══════════════════════════════════════════════
+	const offPedido = escuchar('pedido', (datos) => {
+		if (!datos?.id_pedido) return;
+		const estado = ESTADOS[datos.estado]?.texto ?? datos.estado ?? 'actualizado';
+		const rolDestino = mapearRolPedido(datos);
+
+		agregarNotificacion({
+			titulo: `Pedido #${datos.id_pedido}`,
+			mensaje: `Cambió a "${estado}"`,
+			tipo: 'pedido',
+			id_pedido: datos.id_pedido,
+			rol: rolDestino
+		});
+	});
+
+	const offOferta = escuchar('oferta', (datos) => {
+		if (!datos?.id_pedido) return;
+		agregarNotificacion({
+			titulo: `Nueva oferta · Pedido #${datos.id_pedido}`,
+			mensaje: `${datos.restaurante?.nombre ?? 'Restaurante'} → ${datos.cliente?.direccion ?? 'destino'}`,
+			tipo: 'oferta',
+			id_pedido: datos.id_pedido,
+			rol: 'repartidor'
+		});
+	});
+
+	// A qué rol va dirigida la notificación según el estado del pedido
+	function mapearRolPedido(datos) {
+		if (!datos.estado) return null;
+		// Estados que le importan al cliente
+		if (['listo_para_retirar', 'en_camino', 'entregado', 'cancelado'].includes(datos.estado)) {
+			return 'cliente';
+		}
+		// Estados que le importan al restaurante
+		if (['recibido'].includes(datos.estado)) {
+			return 'restaurante';
+		}
+		// Estados que le importan al repartidor
+		if (['en_camino'].includes(datos.estado)) {
+			return 'repartidor';
+		}
+		return null; // todos
+	}
+
 	function salir() {
 		cerrarSesion();
 		goto('/login');
@@ -46,8 +95,6 @@
 
 	function irPerfil() {
 		menuAbierto = false;
-		// Cliente tiene su propia página con datos fiscales más completos
-		// Todos los demás van a /perfil genérico
 		if ($sesion.rol === 'cliente') {
 			goto('/cliente/perfil');
 		} else {
@@ -76,7 +123,15 @@
 	function irANotificacion(n) {
 		if (n.id_pedido) {
 			panelNotis = false;
-			goto(`/cliente/pedidos/${n.id_pedido}`);
+			if ($sesion.rol === 'cliente') {
+				goto(`/cliente/pedidos/${n.id_pedido}`);
+			} else if ($sesion.rol === 'restaurante') {
+				goto('/restaurante');
+			} else if ($sesion.rol === 'repartidor') {
+				goto('/repartidor');
+			} else if ($sesion.rol === 'coordinador') {
+				goto('/coordinador');
+			}
 		}
 	}
 
@@ -263,7 +318,6 @@
 						></div>
 
 						<div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-							<!-- Mi perfil (para TODOS los roles) -->
 							<button
 								type="button"
 								onclick={irPerfil}
@@ -273,7 +327,6 @@
 								<span>Mi perfil</span>
 							</button>
 
-							<!-- Mis pedidos (solo cliente) -->
 							{#if $sesion.rol === 'cliente'}
 								<button
 									type="button"
@@ -285,10 +338,8 @@
 								</button>
 							{/if}
 
-							<!-- Separador -->
 							<div class="h-px bg-gray-100 my-1"></div>
 
-							<!-- Cerrar sesión (todos) -->
 							<button
 								type="button"
 								onclick={salir}

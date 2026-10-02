@@ -34,7 +34,6 @@ export const RESTAURANTES = [
 		nombre: 'La Birra Bar',
 		categoria: 'Hamburguesas',
 		id_categoria: 1,
-		dirigida: null,
 		direccion: 'Av. 5 de Julio, Maracaibo',
 		calificacion_promedio: 4.7,
 		tiempo_prep_min: 25,
@@ -283,3 +282,117 @@ export const RESTAURANTES = [
 		imagen: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=600&q=80'
 	}
 ];
+
+// ══════════════════════════════════════════════
+// FACTURAS DE COMISIÓN DEL RESTAURANTE
+// GET /api/restaurante/facturas
+// ══════════════════════════════════════════════
+export const FACTURAS_COMISION = [
+	{
+		id_factura: 2001,
+		tipo: 'factura',
+		numero_factura: '00002001',
+		numero_control: '00-0002001',
+		fecha: '2026-10-01T10:00:00',
+		periodo: '2026-09',
+		base_imponible: 245.80,
+		iva_16: 39.33,
+		igtf: 0,
+		total_usd: 285.13,
+		total_bs: 10977.51,
+		anulada: false,
+		estado_pago: 'pendiente',
+		fecha_pago: null
+	},
+	{
+		id_factura: 2002,
+		tipo: 'factura',
+		numero_factura: '00002002',
+		numero_control: '00-0002002',
+		fecha: '2026-09-01T10:00:00',
+		periodo: '2026-08',
+		base_imponible: 218.40,
+		iva_16: 34.94,
+		igtf: 0,
+		total_usd: 253.34,
+		total_bs: 9753.59,
+		anulada: false,
+		estado_pago: 'pagada',
+		fecha_pago: '2026-09-05'
+	},
+	{
+		id_factura: 2003,
+		tipo: 'factura',
+		numero_factura: '00002003',
+		numero_control: '00-0002003',
+		fecha: '2026-08-01T10:00:00',
+		periodo: '2026-07',
+		base_imponible: 198.20,
+		iva_16: 31.71,
+		igtf: 0,
+		total_usd: 229.91,
+		total_bs: 8851.54,
+		anulada: false,
+		estado_pago: 'pagada',
+		fecha_pago: '2026-08-06'
+	},
+	{
+		id_factura: 2004,
+		tipo: 'nota_credito',
+		numero_factura: '00000501',
+		numero_control: '00-0000501',
+		fecha: '2026-07-15T11:30:00',
+		periodo: '2026-06',
+		base_imponible: -45.00,
+		iva_16: -7.20,
+		igtf: 0,
+		total_usd: -52.20,
+		total_bs: -2009.70,
+		anulada: false,
+		estado_pago: 'aplicada',
+		fecha_pago: null,
+		motivo: 'Ajuste por pedidos cancelados del periodo 2026-06'
+	},
+	{
+		id_factura: 2005,
+		tipo: 'factura',
+		numero_factura: '00002004',
+		numero_control: '00-0002004',
+		fecha: '2026-07-01T10:00:00',
+		periodo: '2026-06',
+		base_imponible: 178.50,
+		iva_16: 28.56,
+		igtf: 0,
+		total_usd: 207.06,
+		total_bs: 7971.81,
+		anulada: false,
+		estado_pago: 'pagada',
+		fecha_pago: '2026-07-05'
+	},
+	{
+		id_factura: 2006,
+		tipo: 'factura',
+		numero_factura: '00002005',
+		numero_control: '00-0002005',
+		fecha: '2026-06-15T10:00:00',
+		periodo: '2026-05',
+		base_imponible: 165.00,
+		iva_16: 26.40,
+		igtf: 0,
+		total_usd: 191.40,
+		total_bs: 7368.90,
+		anulada: true,
+		estado_pago: 'anulada',
+		fecha_pago: null
+	}
+];
+
+// ══════════════════════════════════════════════
+// "Endpoint" mock
+// ══════════════════════════════════════════════
+const esperar = (ms = 200) => new Promise((r) => setTimeout(r, ms));
+
+export async function obtenerFacturasComisionMock() {
+	await esperar();
+	return structuredClone(FACTURAS_COMISION);
+}
