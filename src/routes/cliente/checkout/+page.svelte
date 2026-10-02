@@ -25,11 +25,13 @@
 
 	// Dirección
 	let direccionActual = $state(null);
-    $effect(() => {
-	        if (!$direccionActual && $direcciones.length > 0) {
-		            direccionActual = $direcciones.find(d => d.principal) || $direcciones[0];
-	        }
-    });
+
+	$effect(() => {
+		if (!direccionActual && $direcciones.length > 0) {
+			direccionActual = $direcciones.find((d) => d.principal) || $direcciones[0] || null;
+		}
+	});
+
 	let modalDireccion = $state(false);
 
 	// Guard
@@ -91,7 +93,6 @@
 	}
 
 	function formatearCVV(e) {
-		// Solo 3 dígitos
 		let v = e.target.value.replace(/\D/g, '').slice(0, 3);
 		cvv = v;
 		e.target.value = v;
@@ -120,6 +121,10 @@
 	}
 
 	async function confirmarPedido() {
+		if (!direccionActual) {
+			mostrarToast('error', 'Selecciona una dirección de entrega');
+			return;
+		}
 		if (!validarTarjeta()) return;
 
 		confirmando = true;
@@ -128,17 +133,17 @@
 			const propinaFinal = propinaPersonalizada ? Number(propinaOtro) : propina;
 
 			const pedido = await crearPedidoMock({
-             id_direccion: direccionActual.id_direccion,
-             propina: propinaFinal,
-             moneda_pago: moneda,
-             ultimos4
-            });
+				id_direccion: direccionActual.id_direccion,
+				propina: propinaFinal,
+				moneda_pago: moneda,
+				ultimos4
+			});
 
-            // 🔑 Agregar el pedido al store para que aparezca en la lista
-            agregarPedido(pedido);
+			// 🔑 Agregar el pedido al store para que aparezca en la lista
+			agregarPedido(pedido);
 
-             vaciarCarrito();
-             mostrarToast('exito', `¡Pedido #${pedido.id_pedido} confirmado!`);
+			vaciarCarrito();
+			mostrarToast('exito', `¡Pedido #${pedido.id_pedido} confirmado!`);
 
 			setTimeout(() => {
 				goto(`/cliente/pedidos/${pedido.id_pedido}`);
@@ -150,6 +155,7 @@
 	}
 
 	function seleccionarDireccion(dir) {
+		if (!dir) return;
 		direccionActual = dir;
 		modalDireccion = false;
 		mostrarToast('exito', 'Dirección actualizada');
@@ -202,19 +208,27 @@
 							Cambiar
 						</button>
 					</div>
-					<div class="bg-surface-container-low rounded-lg p-3 flex items-start gap-3">
-						<span class="material-symbols-outlined text-primary-container text-[22px] mt-0.5">home_pin</span>
-						<div class="min-w-0">
-							<p class="text-sm font-semibold text-on-surface">{direccionActual.direccion}</p>
-							<p class="text-xs text-on-surface-variant mt-0.5">{direccionActual.zona}</p>
-							{#if direccionActual.referencia}
-								<p class="text-[11px] text-on-surface-variant flex items-center gap-1 mt-1">
-									<span class="material-symbols-outlined text-[14px] text-tertiary">info</span>
-									{direccionActual.referencia}
-								</p>
-							{/if}
+
+					{#if direccionActual}
+						<div class="bg-surface-container-low rounded-lg p-3 flex items-start gap-3">
+							<span class="material-symbols-outlined text-primary-container text-[22px] mt-0.5">home_pin</span>
+							<div class="min-w-0">
+								<p class="text-sm font-semibold text-on-surface">{direccionActual.direccion}</p>
+								<p class="text-xs text-on-surface-variant mt-0.5">{direccionActual.zona}</p>
+								{#if direccionActual.referencia}
+									<p class="text-[11px] text-on-surface-variant flex items-center gap-1 mt-1">
+										<span class="material-symbols-outlined text-[14px] text-tertiary">info</span>
+										{direccionActual.referencia}
+									</p>
+								{/if}
+							</div>
 						</div>
-					</div>
+					{:else}
+						<div class="bg-surface-container-low rounded-lg p-3 flex items-center gap-3">
+							<div class="animate-spin w-5 h-5 border-2 border-primary-container border-t-transparent rounded-full"></div>
+							<p class="text-sm text-on-surface-variant">Cargando dirección...</p>
+						</div>
+					{/if}
 				</article>
 
 				<!-- CARD 2: Resumen del pedido -->
@@ -563,7 +577,7 @@
 					<button
 						type="button"
 						onclick={confirmarPedido}
-						disabled={confirmando || cotizando}
+						disabled={confirmando || cotizando || !direccionActual}
 						class="w-full h-12 mt-5 bg-primary-container hover:bg-primary disabled:opacity-60 text-white font-bold text-sm rounded-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
 					>
 						{#if confirmando}
@@ -575,7 +589,7 @@
 						{/if}
 					</button>
 
-					<!-- Garantía (ícono centrado) -->
+					<!-- Garantía -->
 					<div class="mt-3 p-3 bg-surface-container-low rounded-lg flex items-center gap-3">
 						<div class="w-8 h-8 rounded-full bg-tertiary-container/20 flex items-center justify-center text-tertiary shrink-0">
 							<span class="material-symbols-outlined text-[16px]">verified_user</span>
@@ -619,18 +633,18 @@
 				</div>
 
 				<div class="flex flex-col gap-2">
-					{#each DIRECCIONES as dir (dir.id_direccion)}
+					{#each $direcciones as dir (dir.id_direccion)}
 						<button
 							type="button"
 							onclick={() => seleccionarDireccion(dir)}
 							class="w-full text-left p-3 rounded-lg border-2 transition-all
-								{direccionActual.id_direccion === dir.id_direccion
+								{direccionActual?.id_direccion === dir.id_direccion
 								? 'border-primary-container bg-primary-fixed/20'
 								: 'border-gray-200 hover:border-primary-container/40'}"
 						>
 							<div class="flex items-start gap-3">
 								<span class="material-symbols-outlined text-primary-container text-[20px] mt-0.5 shrink-0">
-									{direccionActual.id_direccion === dir.id_direccion ? 'radio_button_checked' : 'radio_button_unchecked'}
+									{direccionActual?.id_direccion === dir.id_direccion ? 'radio_button_checked' : 'radio_button_unchecked'}
 								</span>
 								<div class="min-w-0 flex-1">
 									<p class="text-sm font-semibold text-on-surface">{dir.direccion}</p>
