@@ -34,11 +34,34 @@
 
   function confirmarReasignar() {
     if (!repartidorSeleccionado || !pedidoAReasignar) return;
+
+    const idRepartidorAnterior = pedidoAReasignar.repartidor?.id_repartidor;
+    const idNuevoRepartidor = repartidorSeleccionado.id_repartidor;
+
+    // Actualizar el pedido con el nuevo repartidor
     pedidos = pedidos.map(p =>
       p.id_pedido === pedidoAReasignar.id_pedido
         ? { ...p, repartidor: repartidorSeleccionado }
         : p
     );
+
+    // Actualizar disponibilidad de repartidores
+    repartidores = repartidores.map(r => {
+        // El nuevo repartidor pasa a ocupado
+        if (r.id_repartidor === idNuevoRepartidor) {
+            return { ...r, disponibilidad: 'ocupado' };
+        }
+        // El anterior vuelve a libre (si es distinto al nuevo)
+        if (
+            idRepartidorAnterior &&
+            r.id_repartidor === idRepartidorAnterior &&
+            idRepartidorAnterior !== idNuevoRepartidor
+        ) {
+            return { ...r, disponibilidad: 'libre' };
+        }
+        return r;
+    });
+
     reasignarAbierto = false;
   }
 
@@ -49,7 +72,21 @@
 
   function confirmarCancelar() {
     if (!pedidoACancelar) return;
+
+    const idRepartidorAnterior = pedidoACancelar.repartidor?.id_repartidor;
+
+    // Eliminar el pedido
     pedidos = pedidos.filter(p => p.id_pedido !== pedidoACancelar.id_pedido);
+
+    // Liberar al repartidor que estaba asignado (si había)
+    if (idRepartidorAnterior) {
+        repartidores = repartidores.map(r =>
+            r.id_repartidor === idRepartidorAnterior
+                ? { ...r, disponibilidad: 'libre' }
+                : r
+        );
+    }
+
     cancelarAbierto = false;
   }
 </script>
@@ -71,47 +108,55 @@
 
     <!-- KPIs -->
     <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <div class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3">
+    <button
+        type="button"
+        onclick={() => document.getElementById('lista-pedidos')?.scrollIntoView({ behavior: 'smooth' })}
+        class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3 hover:shadow-md transition-shadow text-left"
+      >
         <div class="flex flex-col gap-1">
-          <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Pedidos activos</span>
-          <span class="text-3xl font-bold text-on-surface leading-none">{pedidosActivos.length}</span>
-          <span class="text-[11px] text-on-surface-variant">en curso</span>
+            <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Pedidos activos</span>
+            <span class="text-3xl font-bold text-on-surface leading-none">{pedidosActivos.length}</span>
+            <span class="text-[11px] text-on-surface-variant">en curso</span>
         </div>
         <div class="w-11 h-11 rounded-xl bg-primary-fixed/40 flex items-center justify-center shrink-0">
-          <span class="material-symbols-outlined text-primary-container text-[24px]">receipt_long</span>
+            <span class="material-symbols-outlined text-primary-container text-[24px]">receipt_long</span>
         </div>
-      </div>
+      </button>
 
-      <div class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3">
+      <button
+        type="button"
+        onclick={() => document.getElementById('lista-repartidores')?.scrollIntoView({ behavior: 'smooth' })}
+        class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3 hover:shadow-md transition-shadow text-left"
+      >
         <div class="flex flex-col gap-1">
-          <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Repartidores</span>
-          <span class="text-3xl font-bold text-on-surface leading-none">{repartidores.length}</span>
-          <span class="text-[11px] text-green-600 font-semibold">{repartidoresLibres.length} libres</span>
+            <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Repartidores</span>
+            <span class="text-3xl font-bold text-on-surface leading-none">{repartidores.length}</span>
+            <span class="text-[11px] text-green-600 font-semibold">{repartidoresLibres.length} libres</span>
         </div>
         <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-          <span class="material-symbols-outlined text-blue-600 text-[24px]">two_wheeler</span>
+            <span class="material-symbols-outlined text-blue-600 text-[24px]">two_wheeler</span>
         </div>
-      </div>
+      </button>
 
-      <div class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3">
+        <div class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3">
         <div class="flex flex-col gap-1">
-          <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Restaurantes</span>
-          <span class="text-3xl font-bold text-on-surface leading-none">{restaurantesCount}</span>
-          <span class="text-[11px] text-on-surface-variant">conectados</span>
+            <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Restaurantes</span>
+            <span class="text-3xl font-bold text-on-surface leading-none">{restaurantesCount}</span>
+            <span class="text-[11px] text-on-surface-variant">conectados</span>
         </div>
         <div class="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-          <span class="material-symbols-outlined text-amber-600 text-[24px]">storefront</span>
+            <span class="material-symbols-outlined text-amber-600 text-[24px]">storefront</span>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3">
+        <div class="bg-white rounded-2xl shadow-sm p-4 flex items-start justify-between gap-3">
         <div class="flex flex-col gap-1">
-          <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Tiempo promedio</span>
-          <span class="text-3xl font-bold text-on-surface leading-none">{tiempoPromedio}<span class="text-base font-semibold text-on-surface-variant ml-1">min</span></span>
-          <span class="text-[11px] text-on-surface-variant">por entrega</span>
+            <span class="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Tiempo promedio</span>
+            <span class="text-3xl font-bold text-on-surface leading-none">{tiempoPromedio}<span class="text-base font-semibold text-on-surface-variant ml-1">min</span></span>
+            <span class="text-[11px] text-on-surface-variant">por entrega</span>
         </div>
         <div class="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-          <span class="material-symbols-outlined text-purple-600 text-[24px]">schedule</span>
+            <span class="material-symbols-outlined text-purple-600 text-[24px]">schedule</span>
         </div>
       </div>
     </section>
@@ -130,7 +175,7 @@
       <aside class="flex flex-col gap-5">
 
         <!-- PEDIDOS ACTIVOS -->
-        <div class="bg-white rounded-2xl shadow-sm flex flex-col">
+        <div id="lista-pedidos" class="bg-white rounded-2xl shadow-sm flex flex-col">
           <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h2 class="text-sm font-bold text-on-surface">Pedidos activos</h2>
             <span class="text-xs font-bold text-primary-container">{pedidosActivos.length}</span>
@@ -182,7 +227,7 @@
         </div>
 
         <!-- REPARTIDORES -->
-        <div class="bg-white rounded-2xl shadow-sm flex flex-col">
+        <div id="lista-repartidores" class="bg-white rounded-2xl shadow-sm flex flex-col">
           <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h2 class="text-sm font-bold text-on-surface">Repartidores disponibles</h2>
             <span class="text-xs text-on-surface-variant">{repartidoresLibres.length} libres / {repartidores.length - repartidoresLibres.length} ocupados</span>

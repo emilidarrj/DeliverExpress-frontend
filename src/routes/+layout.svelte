@@ -5,7 +5,6 @@
 	import { sesion, cargarSesion, cerrarSesion, RUTA_POR_ROL } from '$lib/stores/sesion.js';
 	import {
 		notificaciones,
-		noLeidas,
 		marcarTodasLeidas,
 		eliminarNotificacion,
 		tiempoRelativo
@@ -26,6 +25,20 @@
 	let menuAbierto = $state(false);
 	let panelNotis = $state(false);
 
+	// Cerrar dropdowns al cambiar de ruta
+	$effect(() => {
+		page.url.pathname;
+		menuAbierto = false;
+		panelNotis = false;
+	});
+
+	// Notificaciones filtradas por rol
+	let notisFiltradas = $derived(
+		$notificaciones.filter((n) => !n.rol || n.rol === $sesion.rol)
+	);
+
+	let noLeidasFiltradas = $derived(notisFiltradas.filter((n) => !n.leida).length);
+
 	function salir() {
 		cerrarSesion();
 		goto('/login');
@@ -33,12 +46,23 @@
 
 	function irPerfil() {
 		menuAbierto = false;
-		goto('/cliente/perfil');
+		// Cliente tiene su propia página con datos fiscales más completos
+		// Todos los demás van a /perfil genérico
+		if ($sesion.rol === 'cliente') {
+			goto('/cliente/perfil');
+		} else {
+			goto('/perfil');
+		}
 	}
 
 	function irPedidos() {
 		menuAbierto = false;
 		goto('/cliente/pedidos');
+	}
+
+	function irAlInicio() {
+		menuAbierto = false;
+		goto(RUTA_POR_ROL[$sesion.rol] || '/');
 	}
 
 	function abrirNotificaciones() {
@@ -66,9 +90,13 @@
 	<header class="bg-white shadow-sm border-b border-gray-100 print:hidden relative z-50">
 		<div class="max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between">
 			<!-- Logo -->
-			<a href={RUTA_POR_ROL[$sesion.rol] || '/'} class="flex items-center gap-2">
+			<button
+				type="button"
+				onclick={irAlInicio}
+				class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+			>
 				<span class="font-bold text-primary">DeliverExpress</span>
-			</a>
+			</button>
 
 			<!-- Campana + Avatar -->
 			<div class="flex items-center gap-2">
@@ -82,11 +110,11 @@
 					>
 						<span class="material-symbols-outlined text-on-surface-variant text-[22px]">notifications</span>
 
-						{#if $noLeidas > 0}
+						{#if noLeidasFiltradas > 0}
 							<span
 								class="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary-container text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"
 							>
-								{$noLeidas}
+								{noLeidasFiltradas}
 							</span>
 						{/if}
 					</button>
@@ -102,17 +130,16 @@
 						<div
 							class="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
 						>
-							<!-- Header del panel -->
 							<div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
 								<div class="flex items-center gap-2">
 									<h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
-									{#if $noLeidas > 0}
+									{#if noLeidasFiltradas > 0}
 										<span class="bg-primary-fixed text-on-primary-fixed text-[10px] font-bold px-2 py-0.5 rounded-full">
-											{$noLeidas} nuevas
+											{noLeidasFiltradas} nuevas
 										</span>
 									{/if}
 								</div>
-								{#if $notificaciones.length > 0}
+								{#if notisFiltradas.length > 0}
 									<button
 										type="button"
 										onclick={() => notificaciones.set([])}
@@ -123,9 +150,8 @@
 								{/if}
 							</div>
 
-							<!-- Lista -->
 							<div class="max-h-96 overflow-y-auto">
-								{#if $notificaciones.length === 0}
+								{#if notisFiltradas.length === 0}
 									<div class="py-10 flex flex-col items-center justify-center px-6">
 										<div class="w-14 h-14 rounded-full bg-surface-container-low flex items-center justify-center mb-3">
 											<span class="material-symbols-outlined text-on-surface-variant text-[28px]">
@@ -134,11 +160,11 @@
 										</div>
 										<p class="text-sm font-semibold text-on-surface">Sin notificaciones</p>
 										<p class="text-xs text-on-surface-variant text-center mt-1">
-											Aquí verás las actualizaciones de tus pedidos
+											Aquí verás las actualizaciones relevantes
 										</p>
 									</div>
 								{:else}
-									{#each $notificaciones as n (n.id)}
+									{#each notisFiltradas as n (n.id)}
 										<div
 											role="button"
 											tabindex="0"
@@ -147,7 +173,6 @@
 											class="flex items-start gap-3 px-4 py-3 hover:bg-surface-container-low/50 transition-colors border-b border-gray-100 last:border-b-0 cursor-pointer
 												{!n.leida ? 'bg-primary-fixed/10' : ''}"
 										>
-											<!-- Ícono por tipo -->
 											<div
 												class="w-9 h-9 rounded-full flex items-center justify-center shrink-0
 													{n.tipo === 'pedido' ? 'bg-primary-fixed text-primary-container' : ''}
@@ -161,7 +186,6 @@
 												</span>
 											</div>
 
-											<!-- Contenido -->
 											<div class="flex-1 min-w-0">
 												<div class="flex items-start justify-between gap-2">
 													<p class="text-sm font-semibold text-on-surface leading-tight">
@@ -179,7 +203,6 @@
 												</p>
 											</div>
 
-											<!-- Cerrar (evita que se propague) -->
 											<button
 												type="button"
 												onclick={(e) => {
@@ -196,8 +219,7 @@
 								{/if}
 							</div>
 
-							<!-- Footer -->
-							{#if $notificaciones.length > 0}
+							{#if notisFiltradas.length > 0 && $sesion.rol === 'cliente'}
 								<div class="px-4 py-2.5 bg-surface-container-low border-t border-gray-100 text-center">
 									<a
 										href="/cliente/pedidos"
@@ -223,7 +245,7 @@
 						class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-surface-container-low transition-colors"
 					>
 						<div class="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-sm">
-							{$sesion.nombre?.charAt(0) || 'C'}
+							{$sesion.nombre?.charAt(0) || 'U'}
 						</div>
 						<div class="hidden sm:flex flex-col text-left leading-tight">
 							<span class="text-xs text-on-surface-variant">{$sesion.nombre}</span>
@@ -241,15 +263,18 @@
 						></div>
 
 						<div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+							<!-- Mi perfil (para TODOS los roles) -->
+							<button
+								type="button"
+								onclick={irPerfil}
+								class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
+							>
+								<span class="material-symbols-outlined text-[20px] text-primary-container">person</span>
+								<span>Mi perfil</span>
+							</button>
+
+							<!-- Mis pedidos (solo cliente) -->
 							{#if $sesion.rol === 'cliente'}
-								<button
-									type="button"
-									onclick={irPerfil}
-									class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
-								>
-									<span class="material-symbols-outlined text-[20px] text-primary-container">person</span>
-									<span>Mi perfil fiscal</span>
-								</button>
 								<button
 									type="button"
 									onclick={irPedidos}
@@ -258,8 +283,12 @@
 									<span class="material-symbols-outlined text-[20px] text-primary-container">receipt_long</span>
 									<span>Mis pedidos</span>
 								</button>
-								<div class="h-px bg-gray-100 my-1"></div>
 							{/if}
+
+							<!-- Separador -->
+							<div class="h-px bg-gray-100 my-1"></div>
+
+							<!-- Cerrar sesión (todos) -->
 							<button
 								type="button"
 								onclick={salir}

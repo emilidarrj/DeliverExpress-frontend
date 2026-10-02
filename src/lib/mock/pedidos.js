@@ -1,14 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════
 // MOCK DE PEDIDOS
-// Cuando el backend esté listo, esto se reemplaza por llamadas a la API:
-//   GET /api/cliente/pedidos          → PEDIDOS
-//   GET /api/cliente/pedidos/{id}     → detalle de un pedido
-//   GET /api/repartidor/historial     → PEDIDOS_REPARTIDOR_DEMO
-//   GET /api/coordinador/pedidos-activos → PEDIDOS_ACTIVOS_COORDINADOR_DEMO
-// ═══════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════
-// 1) PEDIDOS DEL CLIENTE (estructura completa del roadmap_backend.txt)
+// Cuando el backend esté listo, esto se reemplaza por llamadas a la API.
 // ═══════════════════════════════════════════════════════════════════
 
 const REST_INFO = {
@@ -22,11 +14,111 @@ const REST_INFO = {
 	16: { nombre: 'Wok Express Asiático', imagen: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=200&q=80' }
 };
 
-// Helper: fecha hace N horas / días
 const haceHoras = (h) => new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
 const haceDias = (d) => haceHoras(d * 24);
 
 export const PEDIDOS = [
+	// ══════════════════════════════════════════════
+	// PEDIDOS DEMO PARA EL PANEL DEL RESTAURANTE 1
+	// ══════════════════════════════════════════════
+	{
+		id_pedido: 25,
+		id_estado: 1,
+		estado_codigo: 'recibido',
+		estado_nombre: 'Recibido',
+		fecha_creacion: haceHoras(0.1),
+		subtotal: 18.5,
+		costo_envio: 2.0,
+		propina: 2.0,
+		iva_total: 3.28,
+		igtf: 0.75,
+		total: 26.53,
+		moneda_pago: 'USD',
+		tasa_bcv_aplicada: 38.5,
+		total_ves: 1021.41,
+		id_factura: null,
+		distancia_km: 1.5,
+		tiempo_estimado_min: 25,
+		motivo_cancelacion: null,
+		id_restaurante: 1,
+		...REST_INFO[1],
+		repartidor: null,
+		detalle: [
+			{ id_producto: 1, nombre: 'Doble Bacon Smash Burger', cantidad: 2, precio_unitario: 8.5, subtotal: 17.0 },
+			{ id_producto: 6, nombre: 'Bebida Refrescante 500ml', cantidad: 1, precio_unitario: 1.5, subtotal: 1.5 }
+		],
+		historial: [
+			{ id_estado: 1, estado_codigo: 'recibido', estado_nombre: 'Recibido', fecha_hora: haceHoras(0.1) }
+		],
+		calificaciones_hechas: []
+	},
+	{
+		id_pedido: 24,
+		id_estado: 2,
+		estado_codigo: 'en_preparacion',
+		estado_nombre: 'En preparación',
+		fecha_creacion: haceHoras(0.5),
+		subtotal: 14.2,
+		costo_envio: 2.0,
+		propina: 1.0,
+		iva_total: 2.59,
+		igtf: 0.59,
+		total: 20.38,
+		moneda_pago: 'USD',
+		tasa_bcv_aplicada: 38.5,
+		total_ves: 784.63,
+		id_factura: null,
+		distancia_km: 2.1,
+		tiempo_estimado_min: 28,
+		motivo_cancelacion: null,
+		id_restaurante: 1,
+		...REST_INFO[1],
+		repartidor: null,
+		detalle: [
+			{ id_producto: 2, nombre: 'Truffle Mushroom Burger', cantidad: 1, precio_unitario: 9.2, subtotal: 9.2 },
+			{ id_producto: 4, nombre: 'Papas Rústicas Trufadas', cantidad: 1, precio_unitario: 3.2, subtotal: 3.2 },
+			{ id_producto: 6, nombre: 'Bebida Refrescante 500ml', cantidad: 1, precio_unitario: 1.8, subtotal: 1.8 }
+		],
+		historial: [
+			{ id_estado: 1, estado_codigo: 'recibido', estado_nombre: 'Recibido', fecha_hora: haceHoras(0.5) },
+			{ id_estado: 2, estado_codigo: 'en_preparacion', estado_nombre: 'En preparación', fecha_hora: haceHoras(0.4) }
+		],
+		calificaciones_hechas: []
+	},
+	{
+		id_pedido: 23,
+		id_estado: 3,
+		estado_codigo: 'listo_para_retirar',
+		estado_nombre: 'Listo para retirar',
+		fecha_creacion: haceHoras(1.2),
+		subtotal: 25.7,
+		costo_envio: 2.0,
+		propina: 3.0,
+		iva_total: 4.43,
+		igtf: 1.05,
+		total: 36.18,
+		moneda_pago: 'USD',
+		tasa_bcv_aplicada: 38.5,
+		total_ves: 1392.93,
+		id_factura: null,
+		distancia_km: 1.2,
+		tiempo_estimado_min: 22,
+		motivo_cancelacion: null,
+		id_restaurante: 1,
+		...REST_INFO[1],
+		repartidor: null,
+		detalle: [
+			{ id_producto: 1, nombre: 'Doble Bacon Smash Burger', cantidad: 3, precio_unitario: 8.5, subtotal: 25.5 },
+			{ id_producto: 6, nombre: 'Bebida Refrescante 500ml', cantidad: 1, precio_unitario: 0.2, subtotal: 0.2 }
+		],
+		historial: [
+			{ id_estado: 1, estado_codigo: 'recibido', estado_nombre: 'Recibido', fecha_hora: haceHoras(1.2) },
+			{ id_estado: 2, estado_codigo: 'en_preparacion', estado_nombre: 'En preparación', fecha_hora: haceHoras(1.0) },
+			{ id_estado: 3, estado_codigo: 'listo_para_retirar', estado_nombre: 'Listo para retirar', fecha_hora: haceHoras(0.5) }
+		],
+		calificaciones_hechas: []
+	},
+
 	// ══════════════════════════════════════════════
 	// #18 — EN CAMINO (Activo)
 	// ══════════════════════════════════════════════
@@ -75,7 +167,7 @@ export const PEDIDOS = [
 	},
 
 	// ══════════════════════════════════════════════
-	// #17 — EN PREPARACIÓN (Activo)
+	// #17 — EN PREPARACIÓN (Bella Napoli)
 	// ══════════════════════════════════════════════
 	{
 		id_pedido: 17,
@@ -111,7 +203,7 @@ export const PEDIDOS = [
 	},
 
 	// ══════════════════════════════════════════════
-	// #16 — RECIBIDO (Activo)
+	// #16 — RECIBIDO (Tacos)
 	// ══════════════════════════════════════════════
 	{
 		id_pedido: 16,
@@ -234,7 +326,7 @@ export const PEDIDOS = [
 	},
 
 	// ══════════════════════════════════════════════
-	// #13 — ENTREGADO (con factura)
+	// #13 — ENTREGADO
 	// ══════════════════════════════════════════════
 	{
 		id_pedido: 13,
@@ -278,7 +370,7 @@ export const PEDIDOS = [
 	},
 
 	// ══════════════════════════════════════════════
-	// #12 — ENTREGADO (con factura)
+	// #12 — ENTREGADO
 	// ══════════════════════════════════════════════
 	{
 		id_pedido: 12,
@@ -408,9 +500,7 @@ export function contarPorCategoria() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 2) PEDIDOS DEL REPARTIDOR (María)
-// Estructura simplificada para el panel del repartidor.
-// Cuando el backend esté listo: GET /api/repartidor/historial
+// PEDIDOS DEL REPARTIDOR (de María)
 // ═══════════════════════════════════════════════════════════════════
 
 export const PEDIDOS_REPARTIDOR_DEMO = [
@@ -473,12 +563,6 @@ export const PEDIDOS_REPARTIDOR_DEMO = [
 		total: 13.5
 	}
 ];
-
-// ═══════════════════════════════════════════════════════════════════
-// 3) PEDIDOS ACTIVOS DEL COORDINADOR (María)
-// Estructura para el panel del coordinador.
-// Cuando el backend esté listo: GET /api/coordinador/pedidos-activos
-// ═══════════════════════════════════════════════════════════════════
 
 export const PEDIDOS_ACTIVOS_COORDINADOR_DEMO = [
 	...PEDIDOS_REPARTIDOR_DEMO,

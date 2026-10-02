@@ -1,7 +1,7 @@
 import { writable, derived } from 'svelte/store';
 
 // Estructura:
-// { id, titulo, mensaje, fecha (ISO), leida (bool), tipo, id_pedido (opcional) }
+// { id, titulo, mensaje, fecha (ISO), leida (bool), tipo, id_pedido, rol }
 
 const iniciales = [
 	{
@@ -11,7 +11,8 @@ const iniciales = [
 		fecha: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
 		leida: false,
 		tipo: 'pedido',
-		id_pedido: 18
+		id_pedido: 18,
+		rol: 'cliente'
 	},
 	{
 		id: 2,
@@ -20,7 +21,8 @@ const iniciales = [
 		fecha: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
 		leida: false,
 		tipo: 'pedido',
-		id_pedido: 18
+		id_pedido: 18,
+		rol: 'cliente'
 	}
 ];
 
@@ -28,7 +30,7 @@ export const notificaciones = writable(iniciales);
 
 export const noLeidas = derived(notificaciones, ($n) => $n.filter((x) => !x.leida).length);
 
-export function agregarNotificacion({ titulo, mensaje, tipo = 'info', id_pedido = null }) {
+export function agregarNotificacion({ titulo, mensaje, tipo = 'info', id_pedido = null, rol = null }) {
 	notificaciones.update((lista) => [
 		{
 			id: Date.now(),
@@ -37,7 +39,8 @@ export function agregarNotificacion({ titulo, mensaje, tipo = 'info', id_pedido 
 			fecha: new Date().toISOString(),
 			leida: false,
 			tipo,
-			id_pedido
+			id_pedido,
+			rol
 		},
 		...lista
 	]);

@@ -1,21 +1,34 @@
 <script>
-	import { goto } from '$app/navigation';
-	import { mostrarToast } from '$lib/toast.js';
 	import { sesion } from '$lib/stores/sesion.js';
+	import { mostrarToast } from '$lib/toast.js';
+	import { ZONAS } from '$lib/mock/zonas.js';
+	import { direcciones, agregarDireccion, marcarPrincipal } from '$lib/stores/direcciones.js';
+	import MapaSelector from '$lib/componentes/MapaSelector.svelte';
 	import { obtenerPerfilMock, actualizarDatosFiscalesMock } from '$lib/mock/perfil.js';
-	import { DIRECCIONES } from '$lib/mock/direcciones.js';
 
-	// ───── Estado ─────
+	// Dirección principal actual
+	let direccionActual = $derived($direcciones.find((d) => d.principal) || $direcciones[0]);
+
+	// Perfil
 	let perfil = $state(null);
 	let cargando = $state(true);
 	let guardando = $state(false);
-
-	// Campos editables
 	let telefono = $state('');
 	let cedula = $state('');
 	let fotoPreview = $state(null);
-	let direccionActual = $state(DIRECCIONES[0]);
+
+	// Modal de direcciones
 	let modalDireccion = $state(false);
+	let pasoModal = $state('lista'); // 'lista' | 'nueva'
+
+	let nuevaDireccion = $state({
+		id_zona: 1,
+		direccion: '',
+		referencia: '',
+		latitud: 8.295,
+		longitud: -62.735,
+		principal: false
+	});
 
 	$effect(() => {
 		cargarPerfil();
@@ -34,6 +47,7 @@
 		}
 	}
 
+	// ───── Formateo ─────
 	function formatearTelefono(e) {
 		let v = e.target.value.replace(/\D/g, '').slice(0, 11);
 		if (v.length > 4) v = v.slice(0, 4) + ' ' + v.slice(4);
@@ -50,14 +64,6 @@
 		e.target.value = v;
 	}
 
-	function validarTelefono() {
-		const digitos = telefono.replace(/\D/g, '');
-		if (digitos.length < 10 || digitos.length > 11) {
-			return { ok: false, msj: 'El teléfono debe tener 10 u 11 dígitos' };
-		}
-		return { ok: true };
-	}
-
 	function validarCedula() {
 		if (!cedula) return { ok: false, msj: 'La cédula/RIF es obligatoria' };
 		if (!/^V-\d{7,9}$/.test(cedula) && !/^J-\d{8}-\d$/.test(cedula)) {
@@ -70,14 +76,8 @@
 	}
 
 	async function guardar() {
-		const t = validarTelefono();
-		if (!t.ok) {
-			mostrarToast('error', t.msj);
-			return;
-		}
-		const c = validarCedula();
-		if (!c.ok) {
-			mostrarToast('error', c.msj);
+		if (!validarCedula().ok) {
+			mostrarToast('error', validarCedula().msj);
 			return;
 		}
 
@@ -92,16 +92,14 @@
 		}
 	}
 
-	// Foto
+	// ───── Foto ─────
 	function cambiarFoto(e) {
 		const file = e.target.files?.[0];
 		if (!file) return;
-
 		if (file.size > 5 * 1024 * 1024) {
 			mostrarToast('error', 'La imagen no puede pesar más de 5MB');
 			return;
 		}
-
 		const reader = new FileReader();
 		reader.onload = (ev) => {
 			fotoPreview = ev.target.result;
@@ -110,11 +108,42 @@
 		reader.readAsDataURL(file);
 	}
 
-	// Direcciones
-	function seleccionarDireccion(dir) {
-		direccionActual = dir;
-		modalDireccion = false;
+	// ───── Direcciones ─────
+	function abrirModal() {
+		pasoModal = 'lista';
+		modalDireccion = true;
+	}
+
+	function irANuevaDireccion() {
+		nuevaDireccion = {
+			id_zona: ZONAS[0]?.id_zona || 1,
+			direccion: '',
+			referencia: '',
+			latitud: 8.295,
+			longitud: -62.735,
+			principal: false
+		};
+		pasoModal = 'nueva';
+	}
+
+	function guardarNuevaDireccion() {
+		if (!nuevaDireccion.direccion.trim()) {
+			mostrarToast('error', 'Escribe la dirección');
+			return;
+		}
+		const zona = ZONAS.find((z) => z.id_zona === nuevaDireccion.id_zona);
+		agregarDireccion({
+			...nuevaDireccion,
+			zona: zona?.nombre || ''
+		});
+		mostrarToast('exito', 'Dirección agregada');
+		pasoModal = 'lista';
+	}
+
+	function seleccionarPrincipal(id) {
+		marcarPrincipal(id);
 		mostrarToast('exito', 'Dirección principal actualizada');
+		modalDireccion = false;
 	}
 </script>
 
@@ -130,10 +159,9 @@
 			<span class="text-on-surface font-semibold">Mi perfil</span>
 		</nav>
 
-		<!-- Card principal -->
 		<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
 			<!-- Cabecera -->
-			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-6 border-b border-gray-100">
+			<div class="flex items-center justify-between pb-6 border-b border-gray-100">
 				<div>
 					<div class="flex items-center gap-2 flex-wrap">
 						<h1 class="text-2xl font-bold text-on-surface">Mi perfil</h1>
@@ -164,12 +192,7 @@
 						</div>
 						<label class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary-container text-white flex items-center justify-center shadow-md hover:bg-primary transition-colors cursor-pointer">
 							<span class="material-symbols-outlined text-[15px]">photo_camera</span>
-							<input
-								type="file"
-								accept="image/*"
-								onchange={cambiarFoto}
-								class="hidden"
-							/>
+							<input type="file" accept="image/*" onchange={cambiarFoto} class="hidden" />
 						</label>
 					</div>
 					<div class="flex flex-col sm:flex-row items-center justify-between flex-1 gap-3 text-center sm:text-left">
@@ -180,17 +203,12 @@
 						<label class="inline-flex items-center gap-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-semibold px-4 py-2 rounded-lg border border-gray-200 transition-colors cursor-pointer">
 							<span class="material-symbols-outlined text-[18px]">photo_camera</span>
 							Cambiar foto
-							<input
-								type="file"
-								accept="image/*"
-								onchange={cambiarFoto}
-								class="hidden"
-							/>
+							<input type="file" accept="image/*" onchange={cambiarFoto} class="hidden" />
 						</label>
 					</div>
 				</div>
 
-				<!-- ══════════ DIRECCIÓN PRINCIPAL ══════════ -->
+				<!-- ═══════ DIRECCIÓN PRINCIPAL ═══════ -->
 				<div class="py-6 border-b border-gray-100">
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-sm font-bold text-on-surface flex items-center gap-2">
@@ -199,30 +217,35 @@
 						</h2>
 						<button
 							type="button"
-							onclick={() => (modalDireccion = true)}
+							onclick={abrirModal}
 							class="text-xs font-semibold text-primary-container hover:underline"
 						>
 							Cambiar
 						</button>
 					</div>
-					<div class="bg-surface-container-low rounded-lg p-3 flex items-start gap-3">
-						<span class="material-symbols-outlined text-primary-container text-[22px] mt-0.5">home_pin</span>
-						<div class="min-w-0">
-							<p class="text-sm font-semibold text-on-surface">{direccionActual.direccion}</p>
-							<p class="text-xs text-on-surface-variant mt-0.5">{direccionActual.zona}</p>
-							{#if direccionActual.referencia}
-								<p class="text-[11px] text-on-surface-variant flex items-center gap-1 mt-1">
-									<span class="material-symbols-outlined text-[14px] text-tertiary">info</span>
-									{direccionActual.referencia}
-								</p>
-							{/if}
+
+					{#if direccionActual}
+						<div class="bg-surface-container-low rounded-lg p-3 flex items-start gap-3">
+							<span class="material-symbols-outlined text-primary-container text-[22px] mt-0.5">home_pin</span>
+							<div class="min-w-0">
+								<p class="text-sm font-semibold text-on-surface">{direccionActual.direccion}</p>
+								<p class="text-xs text-on-surface-variant mt-0.5">{direccionActual.zona}</p>
+								{#if direccionActual.referencia}
+									<p class="text-[11px] text-on-surface-variant flex items-center gap-1 mt-1">
+										<span class="material-symbols-outlined text-[14px] text-tertiary">info</span>
+										{direccionActual.referencia}
+									</p>
+								{/if}
+							</div>
 						</div>
-					</div>
+					{:else}
+						<p class="text-sm text-on-surface-variant">No tienes direcciones configuradas.</p>
+					{/if}
 				</div>
 
-				<!-- Formulario -->
-				<form onsubmit={(e) => { e.preventDefault(); guardar(); }} class="flex flex-col gap-5 mt-6">
-					<!-- Nombre (readonly) -->
+				<!-- Formulario fiscal -->
+				<form onsubmit={(e) => { e.preventDefault(); guardar(); }} class="flex flex-col gap-5 pt-6">
+					<!-- Nombre -->
 					<div>
 						<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">
 							Nombre y Apellido
@@ -238,7 +261,7 @@
 						</div>
 					</div>
 
-					<!-- Email (readonly) -->
+					<!-- Email -->
 					<div>
 						<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">
 							Correo electrónico de facturación
@@ -307,7 +330,7 @@
 						</div>
 						<p class="text-[11px] text-on-surface-variant mt-1 flex items-center gap-1">
 							<span class="material-symbols-outlined text-[13px]">pin</span>
-							Formato válido: V- seguido de 7 a 9 dígitos, o J- seguido de 8 dígitos y guion
+							Formato: V- seguido de 7 a 9 dígitos, o J- seguido de 8 dígitos y guion
 						</p>
 					</div>
 
@@ -317,16 +340,13 @@
 							verified_user
 						</span>
 						<div>
-							<h2 class="text-sm font-bold text-on-surface">
-								Facturación fiscal electrónica
-							</h2>
+							<h2 class="text-sm font-bold text-on-surface">Facturación fiscal electrónica</h2>
 							<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">
 								Emitimos comprobantes fiscales digitales. Tus pedidos generarán factura formal con tu cédula/RIF automáticamente.
 							</p>
 						</div>
 					</div>
 
-					<!-- Botón -->
 					<button
 						type="submit"
 						disabled={guardando}
@@ -350,35 +370,34 @@
 		</div>
 	</div>
 
-	<!-- ═══════════ MODAL DIRECCIÓN ═══════════ -->
+	<!-- ═══════ MODAL DIRECCIONES ═══════ -->
 	{#if modalDireccion}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-			<div class="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl">
+			<div class="w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
 				<div class="flex items-center justify-between mb-4">
-					<h3 class="text-lg font-bold text-on-surface">Dirección principal</h3>
+					<h3 class="text-lg font-bold text-on-surface">
+						{pasoModal === 'lista' ? 'Mis direcciones' : 'Nueva dirección'}
+					</h3>
 					<button
 						type="button"
 						onclick={() => (modalDireccion = false)}
-						class="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors"
+						class="text-on-surface-variant hover:text-on-surface p-1"
 						aria-label="Cerrar"
 					>
 						<span class="material-symbols-outlined text-[20px]">close</span>
 					</button>
 				</div>
 
-				<div class="flex flex-col gap-2">
-					{#each DIRECCIONES as dir (dir.id_direccion)}
-						<button
-							type="button"
-							onclick={() => seleccionarDireccion(dir)}
-							class="w-full text-left p-3 rounded-lg border-2 transition-all
-								{direccionActual.id_direccion === dir.id_direccion
-								? 'border-primary-container bg-primary-fixed/20'
-								: 'border-gray-200 hover:border-primary-container/40'}"
-						>
-							<div class="flex items-start gap-3">
-								<span class="material-symbols-outlined text-primary-container text-[20px] mt-0.5 shrink-0">
-									{direccionActual.id_direccion === dir.id_direccion ? 'radio_button_checked' : 'radio_button_unchecked'}
+				{#if pasoModal === 'lista'}
+					<!-- Lista -->
+					<div class="flex flex-col gap-2 mb-4">
+						{#each $direcciones as dir (dir.id_direccion)}
+							<div
+								class="p-3 rounded-lg border-2 flex items-start gap-3
+									{dir.principal ? 'border-primary-container bg-primary-fixed/10' : 'border-gray-200'}"
+							>
+								<span class="material-symbols-outlined text-primary-container text-[20px] mt-0.5">
+									{dir.principal ? 'radio_button_checked' : 'radio_button_unchecked'}
 								</span>
 								<div class="min-w-0 flex-1">
 									<p class="text-sm font-semibold text-on-surface">{dir.direccion}</p>
@@ -387,18 +406,102 @@
 										<p class="text-[11px] text-on-surface-variant mt-1 italic">{dir.referencia}</p>
 									{/if}
 								</div>
+								{#if !dir.principal}
+									<button
+										type="button"
+										onclick={() => seleccionarPrincipal(dir.id_direccion)}
+										class="text-[11px] font-semibold text-primary-container hover:underline shrink-0"
+									>
+										Marcar principal
+									</button>
+								{/if}
 							</div>
-						</button>
-					{/each}
-				</div>
+						{/each}
+					</div>
 
-				<button
-					type="button"
-					onclick={() => (modalDireccion = false)}
-					class="w-full h-11 mt-4 bg-surface-container text-on-surface font-semibold text-sm rounded-lg hover:bg-surface-container-high transition-colors"
-				>
-					Cerrar
-				</button>
+					<button
+						type="button"
+						onclick={irANuevaDireccion}
+						class="w-full h-11 bg-primary-container hover:bg-primary text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-colors"
+					>
+						<span class="material-symbols-outlined text-[18px]">add</span>
+						Agregar nueva dirección
+					</button>
+				{:else}
+					<!-- Nueva -->
+					<div class="flex flex-col gap-4">
+						<div>
+							<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">Zona</label>
+							<select
+								bind:value={nuevaDireccion.id_zona}
+								class="w-full h-11 bg-white text-on-surface text-sm rounded-lg px-3.5 border border-gray-200 focus:outline-none focus:border-primary-container"
+							>
+								{#each ZONAS as z (z.id_zona)}
+									<option value={z.id_zona}>{z.nombre}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div>
+							<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">Dirección</label>
+							<input
+								type="text"
+								bind:value={nuevaDireccion.direccion}
+								placeholder="Av. Principal 123, Apto 4B"
+								class="w-full h-11 bg-white text-on-surface text-sm rounded-lg px-3.5 border border-gray-200 focus:outline-none focus:border-primary-container"
+							/>
+						</div>
+
+						<div>
+							<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">
+								Referencia (opcional)
+							</label>
+							<input
+								type="text"
+								bind:value={nuevaDireccion.referencia}
+								placeholder="Casa azul, portón negro, etc."
+								class="w-full h-11 bg-white text-on-surface text-sm rounded-lg px-3.5 border border-gray-200 focus:outline-none focus:border-primary-container"
+							/>
+						</div>
+
+						<div>
+							<label class="block text-xs font-semibold text-on-surface-variant mb-1.5">
+								Ubicación en el mapa
+							</label>
+							<MapaSelector
+								bind:lat={nuevaDireccion.latitud}
+								bind:lon={nuevaDireccion.longitud}
+								height="280px"
+							/>
+						</div>
+
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input
+								type="checkbox"
+								bind:checked={nuevaDireccion.principal}
+								class="w-4 h-4 rounded accent-primary-container"
+							/>
+							<span class="text-sm text-on-surface">Marcar como principal</span>
+						</label>
+
+						<div class="flex justify-end gap-2 pt-2">
+							<button
+								type="button"
+								onclick={() => (pasoModal = 'lista')}
+								class="px-5 py-2.5 rounded-lg text-on-surface hover:bg-surface-container font-semibold text-sm"
+							>
+								Volver
+							</button>
+							<button
+								type="button"
+								onclick={guardarNuevaDireccion}
+								class="px-5 py-2.5 rounded-lg bg-primary-container hover:bg-primary text-white font-bold text-sm"
+							>
+								Guardar dirección
+							</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}

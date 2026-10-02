@@ -3,7 +3,7 @@
 	import { usd, bs } from '$lib/formato.js';
 	import { mostrarToast } from '$lib/toast.js';
 	import { carrito, cantidadTotal, precioTotal, vaciarCarrito } from '$lib/stores/carrito.js';
-	import { DIRECCIONES } from '$lib/mock/direcciones.js';
+	import { direcciones } from '$lib/stores/direcciones.js';
 	import { cotizarMock } from '$lib/mock/cotizacion.js';
 	import { crearPedidoMock } from '$lib/mock/crear-pedido.js';
 	import { agregarPedido } from '$lib/stores/pedidos.js';
@@ -24,7 +24,12 @@
 	let titular = $state('');
 
 	// Dirección
-	let direccionActual = $state(DIRECCIONES[0]);
+	let direccionActual = $state(null);
+    $effect(() => {
+	        if (!$direccionActual && $direcciones.length > 0) {
+		            direccionActual = $direcciones.find(d => d.principal) || $direcciones[0];
+	        }
+    });
 	let modalDireccion = $state(false);
 
 	// Guard
