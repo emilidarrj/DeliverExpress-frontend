@@ -36,39 +36,39 @@
 		},
 
 		repartidor: {
-			titulo: 'Mi perfil',
-			icono: 'delivery_dining',
-			tipoIdentificacion: 'Cédula',
-			puedeEditarTelefono: true,
-			puedeEditarIdentificacion: true,
-			endpointGet: null,
-			endpointPut: null,
-			campoIdentificacion: 'cedula',
-			backendActivo: false
+			 titulo: 'Mi perfil',
+    		 icono: 'delivery_dining',
+  		     tipoIdentificacion: 'Cédula',
+    		 puedeEditarTelefono: true,
+    		 puedeEditarIdentificacion: true,
+    		 endpointGet: '/api/repartidor/perfil',
+    		 endpointPut: '/api/repartidor/perfil',
+    		 campoIdentificacion: 'cedula',
+    		 backendActivo: true
 		},
 
 		coordinador: {
-			titulo: 'Mi perfil',
-			icono: 'supervisor_account',
-			tipoIdentificacion: 'Cédula',
-			puedeEditarTelefono: true,
-			puedeEditarIdentificacion: true,
-			endpointGet: null,
-			endpointPut: null,
-			campoIdentificacion: 'cedula',
-			backendActivo: false
+    		 titulo: 'Mi perfil',
+    	 	 icono: 'supervisor_account',
+    		 tipoIdentificacion: null,
+    		 puedeEditarTelefono: true,
+    		 puedeEditarIdentificacion: false,
+    		 endpointGet: '/api/coordinador/perfil',
+    		 endpointPut: '/api/coordinador/perfil',
+    		 campoIdentificacion: null,
+    		 backendActivo: true
 		},
 
 		admin: {
-			titulo: 'Mi perfil',
-			icono: 'admin_panel_settings',
-			tipoIdentificacion: null,
-			puedeEditarTelefono: false,
-			puedeEditarIdentificacion: false,
-			endpointGet: null,
-			endpointPut: null,
-			campoIdentificacion: null,
-			backendActivo: false
+  			 titulo: 'Mi perfil',
+  			 icono: 'admin_panel_settings',
+  			 tipoIdentificacion: null,
+  			 puedeEditarTelefono: false,
+  			 puedeEditarIdentificacion: false,
+  			 endpointGet: '/api/admin/perfil',
+  			 endpointPut: '/api/admin/perfil',
+  			 campoIdentificacion: null,
+  			 backendActivo: true
 		}
 	};
 
