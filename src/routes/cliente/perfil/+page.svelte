@@ -1,16 +1,17 @@
 <script>
+	import { onMount } from 'svelte';
 	import { sesion } from '$lib/stores/sesion.js';
 	import { mostrarToast } from '$lib/toast.js';
 	import { ZONAS } from '$lib/mock/zonas.js';
-	import { direcciones, agregarDireccion, marcarPrincipal } from '$lib/stores/direcciones.js';
+	import { direcciones } from '$lib/stores/direcciones.js';
 	import MapaSelector from '$lib/componentes/MapaSelector.svelte';
-	import { obtenerPerfilMock, actualizarDatosFiscalesMock } from '$lib/mock/perfil.js';
+	import { api } from '$lib/api.js';
 
 	// Dirección principal actual
 	let direccionActual = $derived($direcciones.find((d) => d.principal) || $direcciones[0]);
 
 	// Perfil
-	let perfil = $state(null);
+	let perfil = $state({ nombre: '', email: '', telefono: '', cedula_rif: '' });
 	let cargando = $state(true);
 	let guardando = $state(false);
 	let telefono = $state('');
@@ -30,22 +31,37 @@
 		principal: false
 	});
 
-	$effect(() => {
+	onMount(() => {
 		cargarPerfil();
+		cargarDirecciones();
 	});
 
 	async function cargarPerfil() {
 		cargando = true;
 		try {
-			perfil = await obtenerPerfilMock();
-			telefono = perfil.telefono;
-			cedula = perfil.cedula_rif;
+			const datos = await api('/api/cliente/perfil');
+			console.log('[perfil] respuesta backend:', datos);
+
+			perfil = datos;
+			telefono = datos.telefono || '';
+			cedula = datos.cedula_rif || '';
 		} catch (err) {
-			mostrarToast('error', err.message);
+			console.error('[perfil] error:', err);
+			mostrarToast('error', err?.message || 'No se pudieron cargar los datos del perfil');
 		} finally {
 			cargando = false;
 		}
 	}
+
+	async function cargarDirecciones() {
+    try {
+        const datos = await api('/api/cliente/direcciones');
+        direcciones.set(datos);
+    } catch (err) {
+        console.error('[direcciones] error:', err);
+        mostrarToast('error', 'No se pudieron cargar las direcciones');
+    }
+}
 
 	// ───── Formateo ─────
 	function formatearTelefono(e) {
@@ -83,10 +99,19 @@
 
 		guardando = true;
 		try {
-			perfil = await actualizarDatosFiscalesMock({ telefono, cedula_rif: cedula });
+			await api('/api/cliente/datos-fiscales', {
+				metodo: 'PUT',
+				cuerpo: {
+					cedula_rif: cedula.trim().toUpperCase(),
+					telefono: telefono.trim()
+				}
+			});
+
 			mostrarToast('exito', 'Datos fiscales actualizados con éxito');
+			await cargarPerfil();
 		} catch (err) {
-			mostrarToast('error', err.message);
+			console.error('[perfil] error guardando:', err);
+			mostrarToast('error', err?.message || 'No se pudieron guardar los datos');
 		} finally {
 			guardando = false;
 		}
@@ -126,25 +151,57 @@
 		pasoModal = 'nueva';
 	}
 
-	function guardarNuevaDireccion() {
-		if (!nuevaDireccion.direccion.trim()) {
-			mostrarToast('error', 'Escribe la dirección');
-			return;
-		}
-		const zona = ZONAS.find((z) => z.id_zona === nuevaDireccion.id_zona);
-		agregarDireccion({
-			...nuevaDireccion,
-			zona: zona?.nombre || ''
-		});
-		mostrarToast('exito', 'Dirección agregada');
-		pasoModal = 'lista';
-	}
+	async function guardarNuevaDireccion() {
+    if (!nuevaDireccion.direccion.trim()) {
+        mostrarToast('error', 'Escribe la dirección');
+        return;
+    }
 
-	function seleccionarPrincipal(id) {
-		marcarPrincipal(id);
-		mostrarToast('exito', 'Dirección principal actualizada');
-		modalDireccion = false;
-	}
+    try {
+        await api('/api/cliente/direcciones', {
+            metodo: 'POST',
+            cuerpo: {
+                id_zona: Number(nuevaDireccion.id_zona),
+                direccion: nuevaDireccion.direccion.trim(),
+                referencia: nuevaDireccion.referencia?.trim() || null,
+                latitud: Number(nuevaDireccion.latitud),
+                longitud: Number(nuevaDireccion.longitud),
+                principal: Boolean(nuevaDireccion.principal)
+            }
+        });
+
+        mostrarToast('exito', 'Dirección guardada correctamente');
+
+        await cargarDirecciones();
+
+        pasoModal = 'lista';
+    } catch (error) {
+        console.error('Error guardando dirección:', error);
+        mostrarToast(
+            'error',
+            error?.message || 'No se pudo guardar la dirección'
+        );
+    }
+}
+
+	async function seleccionarPrincipal(id) {
+    try {
+        await api(`/api/cliente/direcciones/${id}/principal`, {
+            metodo: 'PUT'
+        });
+
+        await cargarDirecciones();
+
+        mostrarToast('exito', 'Dirección principal actualizada');
+        modalDireccion = false;
+    } catch (error) {
+        console.error('Error cambiando dirección principal:', error);
+        mostrarToast(
+            'error',
+            error?.message || 'No se pudo cambiar la dirección principal'
+        );
+    }
+}
 </script>
 
 <div class="min-h-screen bg-surface">
@@ -187,7 +244,7 @@
 							{#if fotoPreview}
 								<img src={fotoPreview} alt="Foto de perfil" class="w-full h-full object-cover" />
 							{:else}
-								<span class="text-3xl font-bold">{$sesion.nombre?.charAt(0) || 'C'}</span>
+								<span class="text-3xl font-bold">{perfil.nombre?.charAt(0) || $sesion.nombre?.charAt(0) || 'C'}</span>
 							{/if}
 						</div>
 						<label class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary-container text-white flex items-center justify-center shadow-md hover:bg-primary transition-colors cursor-pointer">
@@ -392,31 +449,41 @@
 					<!-- Lista -->
 					<div class="flex flex-col gap-2 mb-4">
 						{#each $direcciones as dir (dir.id_direccion)}
-							<div
-								class="p-3 rounded-lg border-2 flex items-start gap-3
-									{dir.principal ? 'border-primary-container bg-primary-fixed/10' : 'border-gray-200'}"
-							>
-								<span class="material-symbols-outlined text-primary-container text-[20px] mt-0.5">
-									{dir.principal ? 'radio_button_checked' : 'radio_button_unchecked'}
-								</span>
-								<div class="min-w-0 flex-1">
-									<p class="text-sm font-semibold text-on-surface">{dir.direccion}</p>
-									<p class="text-xs text-on-surface-variant mt-0.5">{dir.zona}</p>
-									{#if dir.referencia}
-										<p class="text-[11px] text-on-surface-variant mt-1 italic">{dir.referencia}</p>
-									{/if}
-								</div>
-								{#if !dir.principal}
-									<button
-										type="button"
-										onclick={() => seleccionarPrincipal(dir.id_direccion)}
-										class="text-[11px] font-semibold text-primary-container hover:underline shrink-0"
-									>
-										Marcar principal
-									</button>
-								{/if}
-							</div>
-						{/each}
+	<button
+		type="button"
+		onclick={() => seleccionarPrincipal(dir.id_direccion)}
+		disabled={dir.principal}
+		class="w-full text-left p-3 rounded-lg border-2 flex items-start gap-3 transition-colors
+			{dir.principal
+				? 'border-primary-container bg-primary-fixed/10 cursor-default'
+				: 'border-gray-200 hover:border-primary-container hover:bg-primary-fixed/5 cursor-pointer'}"
+	>
+		<span
+			class="material-symbols-outlined text-primary-container text-[22px] mt-0.5 shrink-0"
+			style="font-variation-settings: 'FILL' {dir.principal ? 1 : 0};"
+		>
+			{dir.principal ? 'radio_button_checked' : 'radio_button_unchecked'}
+		</span>
+
+		<div class="min-w-0 flex-1">
+			<p class="text-sm font-semibold text-on-surface">{dir.direccion}</p>
+			<p class="text-xs text-on-surface-variant mt-0.5">{dir.zona}</p>
+			{#if dir.referencia}
+				<p class="text-[11px] text-on-surface-variant mt-1 italic">{dir.referencia}</p>
+			{/if}
+		</div>
+
+		{#if !dir.principal}
+			<span class="text-[11px] font-semibold text-primary-container shrink-0 self-center">
+				Marcar principal
+			</span>
+		{:else}
+			<span class="text-[11px] font-semibold text-primary-container shrink-0 self-center">
+				Principal
+			</span>
+		{/if}
+	</button>
+{/each}
 					</div>
 
 					<button
